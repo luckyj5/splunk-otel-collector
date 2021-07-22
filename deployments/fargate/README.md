@@ -115,7 +115,12 @@ specify the configuration YAML directly at the commandline using environment var
 - Add policy `AmazonSSMReadOnlyAccess` to the task role in order for the task to have
   read access to the Parameter Store.
 
-### Standalone Container
+### Standalone Task
 The `ecs_observer` is capable of scanning for targets in the entire cluster in a given region.
-This allows for the Collector to run in a task separate from the monitored application and
-collect telemetry data.
+This allows for collecting telemetry data by deploying the Collector container in a task 
+separate from the monitored application containers. This is in contrast to the sidecar 
+deployment whereby the Collector container is in the same task as the monitored application
+containers. Do not configure the ECS
+[resourcedetection](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#resource-detection-processor) 
+processor for the standalone task since it would detect resources in the standalone Collector
+task itself, which you are not monitoring.
