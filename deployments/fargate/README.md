@@ -5,7 +5,7 @@ Familiarity with AWS Fargate (Fargate) is assumed. Consult the
 Unless stated otherwise, it is assumed that the [Splunk OpenTelemetry Collector](https://github.com/signalfx/splunk-otel-collector)
 (Collector) is deployed to an ECS Task in a **sidecar** container alongside monitored applications.
 
-Applies to Collector release v0.30.0 and above. See the Docker image repository
+Applies to Collector release v0.30.0 and above which corresponds to image tag 0.30.0 and above in the image repository
 [here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
 
 

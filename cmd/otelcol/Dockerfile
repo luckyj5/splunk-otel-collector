@@ -33,4 +33,4 @@ COPY config/collector/otlp_config_linux.yaml /etc/otel/collector/otlp_config_lin
 COPY config/collector/agent_config.yaml      /etc/otel/collector/agent_config.yaml
 COPY config/collector/fargate_config.yaml    /etc/otel/collector/fargate_config.yaml
 ENTRYPOINT ["/otelcol"]
-EXPOSE 13133 14250 14268 4317 6060 8888 9411 9443 9080 6832 6831 7276 55679
+EXPOSE 13133 14250 14268 4317 6060 8888 9411 9443 9080 6832 6831 55679
