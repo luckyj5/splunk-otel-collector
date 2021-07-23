@@ -1,22 +1,21 @@
 # AWS Fargate Deployment
 Familiarity with AWS Fargate (Fargate) is assumed. Consult the 
-[User Guide for AWS Fargate](https://docs.aws.amazon.com/AmazonECS/latest/userguide/what-is-fargate.html) for further reading.
+[User Guide for AWS Fargate](https://docs.aws.amazon.com/AmazonECS/latest/userguide/what-is-fargate.html)
+for further reading.
 
-Unless stated otherwise, it is assumed that the [Splunk OpenTelemetry Collector](https://github.com/signalfx/splunk-otel-collector)
-(Collector) is deployed to an ECS Task in a **sidecar** container alongside monitored applications.
+Unless stated otherwise, it is assumed that the
+[Splunk OpenTelemetry Collector](https://github.com/signalfx/splunk-otel-collector)
+(Collector) is deployed to an ECS Task in a **sidecar** container alongside monitored
+applications.
 
-Applies to Collector release v0.30.0 and above which corresponds to image tag 0.30.0 and above in the image repository
-[here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
-
+Applies to Collector release v0.30.0 and above which corresponds to image tag 0.30.0 and above
+in the image repository [here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
 
 ## Default Configuration
 The default configuration file is located at `/etc/otel/collector/fargate_config.yaml`
-in the Collector image. See 
-[here](https://github.com/signalfx/splunk-otel-collector/blob/main/cmd/otelcol/config/collector/fargate_config.yaml)
-for its contents and 
-[here](https://github.com/signalfx/splunk-otel-collector/blob/main/cmd/otelcol/Dockerfile)
-for the Collector image Dockerfile. Note that the default metrics receivers are `hostmetrics`
-and `smartagent/ecs-metadata`.
+in the Collector image. See [here](../../cmd/otelcol/config/collector/fargate_config.yaml)
+for its contents and [here](../../cmd/otelcol/Dockerfile) for the Collector image Dockerfile.
+Note that the default metrics receivers are `hostmetrics` and `smartagent/ecs-metadata`.
 
 Default configuration steps in the container definition for the Collector:
 - Map the endpoint ports in the default configuration file (i.e. `13133`, `6060`,
@@ -91,12 +90,12 @@ service:
       exporters: [signalfx]
 ```
 In a sidecar deployment the discovered targets must be within the task in which the Collector
-container is running. Note that the task arn pattern in the example above 
-restricts the `ecs_observer` to discover targets in running revisions of task `lorem-ipsum-task`.
-This means that the `ecs_observer` will discover targets outside the task in which the Collector is
-running when multiple revisions of task `lorem-ipsum-task` are running. One way
-to solve this is to use the complete task arn as shown below. This however adds the headache of
-updating the configuration to keep pace with task revisions.
+container is running. Note that the task arn pattern in the example above restricts the
+`ecs_observer` to discover targets in running revisions of task `lorem-ipsum-task`. This
+means that the `ecs_observer` will discover targets outside the task in which the Collector is
+running when multiple revisions of task `lorem-ipsum-task` are running. One way to solve this
+is to use the complete task arn as shown below. This however adds the headache of updating the
+configuration to keep pace with task revisions.
 
 ```yaml
 ...
