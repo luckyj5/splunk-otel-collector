@@ -11,6 +11,17 @@ applications.
 Applies to Collector release v0.30.0 and above which corresponds to image tag 0.30.0 and above
 in the image repository [here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
 
+Overview of the container definition for the Collector:
+- Set environment variable `SPLUNK_CONFIG` to the configuration file path. Set `SPLUNK_CONFIG`
+  to the default configuration file path to enable default configuration.
+- Use extension `ecs_observer` in your custom configuration to discover targets.
+- Enable ECS read-only permissions in the task role when using `ecs_observer`.
+- Filter the targets for `ecs_observer` to be within task when the Collector is a sidecar,
+  that is, the Collector and the monitored containers are in the same task.
+- `ecs_observer` is currently limited to Prometheus targets.
+- You can use environment variable `SPLUNK_CONFIG_YAML` instead of `SPLUNK_CONFIG` to specify
+  your configuration YAML directly. No need for a file.
+
 ## Default Configuration
 The default configuration file is located at `/etc/otel/collector/fargate_config.yaml`
 in the Collector image. See [here](../../cmd/otelcol/config/collector/fargate_config.yaml)
@@ -25,15 +36,15 @@ Default configuration steps in the container definition for the Collector:
 - Assign a list of images whose metrics you want excluded to environment variable `IMAGES_TO_EXCLUDE`.
 
 ## Custom Configuration
-For the Collector pick up your custom configuration, you need to assign the path to your custom
-configuration file to environment variable `SPLUNK_CONFIG` in the container definition for
-the Collector. In Fargate, this means having your custom configuration file in a volume
+For the Collector to pick up your custom configuration, you need to assign the path to your
+custom configuration file to environment variable `SPLUNK_CONFIG` in the container definition
+for the Collector. In Fargate, this means having your custom configuration file in a volume
 attached to the task and assigning the path to `SPLUNK_CONFIG`.
 
 ### ecs_observer
 Add extension
 [Amazon Elastic Container Service Observer](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/observer/ecsobserver#amazon-elastic-container-service-observer)
-(ecsobserver or ecs_observer) to your custom configuration to discover application metrics
+(ecsobserver or ecs_observer) to your custom configuration in order to discover metrics
 targets. The `ecs_observer` can discover targets in running tasks, filtered by service names,
 task definitions and container labels. The `ecs_observer` is currently limited to discovering
 Prometheus targets and requires the read-only permissions below. Add the permissions to the task role
@@ -49,7 +60,7 @@ cluster `lorem-ipsum-cluster` of region `us-west-2` where the task arn pattern i
 and write the results in file `/etc/ecs_sd_targets.yaml`. The `prometheus` receiver is
 configured to read targets from the results file. Note that the values for `access_token`
 and `realm` are read from environment variables `SPLUNK_ACCESS_TOKEN` and `SPLUNK_REALM`
-respectively, which must be specified in the container definition.
+respectively, which must be specified in your container definition.
 
 ```yaml
 extensions:
@@ -89,13 +100,14 @@ service:
       processors: [batch, resourcedetection]
       exporters: [signalfx]
 ```
-In a sidecar deployment the discovered targets must be within the task in which the Collector
-container is running. Note that the task arn pattern in the example above restricts the
-`ecs_observer` to discover targets in running revisions of task `lorem-ipsum-task`. This
-means that the `ecs_observer` will discover targets outside the task in which the Collector is
-running when multiple revisions of task `lorem-ipsum-task` are running. One way to solve this
-is to use the complete task arn as shown below. This however adds the headache of updating the
-configuration to keep pace with task revisions.
+For the sidecar deployment of the Collector, that is, the Collector and the monitored
+containers are in the same task, the discovered targets must be within the task. Note that
+the task arn pattern for `ecs_observer` in the example above filters the discovered targets
+to running revisions of task `lorem-ipsum-task`. This means that the `ecs_observer` will
+discover targets outside the task in which the Collector is running when multiple revisions
+of task `lorem-ipsum-task` are running. One way to solve this is to use the complete task arn
+as shown below. This however adds the overhead of updating the configuration to keep pace
+with task revisions.
 
 ```yaml
 ...
@@ -106,20 +118,20 @@ configuration to keep pace with task revisions.
 ### Direct Configuration
 Since access to the filesystem is not readily available in Fargate, it may be convenient to
 specify the configuration YAML directly at the commandline using environment variable
-`SPLUNK_CONFIG_YAML`. The steps are:
+`SPLUNK_CONFIG_YAML`. You could:
 - Create a parameter in the AWS Systems Manager Parameter Store for your custom configuration
   YAML.
-- Use the `ValueFrom` feature to assign the parameter to environment variable
-  `SPLUNK_CONFIG_YAML` in the container definition for the Collector.
-- Add policy `AmazonSSMReadOnlyAccess` to the task role in order for the task to have
-  read access to the Parameter Store.
+- Use the `ValueFrom` feature to assign the parameter to `SPLUNK_CONFIG_YAML` in the container
+  definition for the Collector.
+- Add policy `AmazonSSMReadOnlyAccess` to the task role in order for the task to have read
+  access to the Parameter Store.
 
 ### Standalone Task
-The `ecs_observer` is capable of scanning for targets in the entire cluster in a given region.
-This allows for collecting telemetry data by deploying the Collector container in a task 
-separate from the monitored application containers. This is in contrast to the sidecar 
+Extension `ecs_observer` is capable of scanning for targets in the entire cluster for a given
+region. This allows you to deploy the Collector container in a standalone task separate from the 
+monitored application containers and collect telemetry data. This is in contrast to the sidecar 
 deployment whereby the Collector container is in the same task as the monitored application
 containers. Do not configure the ECS
 [resourcedetection](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#resource-detection-processor) 
 processor for the standalone task since it would detect resources in the standalone Collector
-task itself, which you are not monitoring.
+task itself which you are not monitoring.
