@@ -5,50 +5,52 @@ for further reading.
 
 Unless stated otherwise, it is assumed that the
 [Splunk OpenTelemetry Collector](https://github.com/signalfx/splunk-otel-collector)
-(Collector) is deployed to an ECS Task in a **sidecar** container alongside monitored
-applications.
+(Collector) is deployed to an ECS Task as a **sidecar** container alongside monitored
+application containers.
 
-Applies to Collector release v0.30.0 and above which corresponds to image tag 0.30.0 and above
-in the image repository [here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
+The instructions herein apply to release v0.30.0 and above of the Collector which corresponds
+to image tag 0.30.0 and above in the image repository
+[here](https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags).
 
-Overview of the container definition for the Collector:
-- Set environment variable `SPLUNK_CONFIG` to the configuration file path. Set `SPLUNK_CONFIG`
-  to the default configuration file path to enable default configuration.
-- Use extension `ecs_observer` in your custom configuration to discover targets.
-- Enable ECS read-only permissions in the task role when using `ecs_observer`.
-- Filter the targets for `ecs_observer` to be within task when the Collector is a sidecar,
-  that is, the Collector and the monitored containers are in the same task.
-- `ecs_observer` is currently limited to Prometheus targets.
-- You can use environment variable `SPLUNK_CONFIG_YAML` instead of `SPLUNK_CONFIG` to specify
-  your configuration YAML directly. No need for a file.
+Overall, you deploy the Collector to Fargate by adding a container definition for it in which you:
+- specify the Collector image.
+- specify the configuration file to use by setting environment variable `SPLUNK_CONFIG` with the file path.
+- set `SPLUNK_CONFIG` with `/etc/otel/collector/fargate_config.yaml` to use the default configuration file.
+- optionally use environment variable `SPLUNK_CONFIG_YAML` instead of `SPLUNK_CONFIG` to specify
+  configuration YAML directly (No need for a file).
+- use extension `ecs_observer` in custom configuration to discover targets.
+- enable ECS read-only permissions in the task role when using `ecs_observer`.
+- filter the targets for `ecs_observer` to be within task when the Collector is a sidecar.
+- note that `ecs_observer` is currently limited to Prometheus targets.
 
 ## Default Configuration
-The default configuration file is located at `/etc/otel/collector/fargate_config.yaml`
-in the Collector image. See [here](../../cmd/otelcol/config/collector/fargate_config.yaml)
-for its contents and [here](../../cmd/otelcol/Dockerfile) for the Collector image Dockerfile.
-Note that the default metrics receivers are `hostmetrics` and `smartagent/ecs-metadata`.
-
-Default configuration steps in the container definition for the Collector:
+In the container definition for the Collector:
 - Map the endpoint ports in the default configuration file (i.e. `13133`, `6060`,
   `55679`, `14250`, `6832`, `6831`, `14268`, `8888`, `7276`, `9943`, `9411`, `9080`).
-- Assign the default configuration file path to environment variable `SPLUNK_CONFIG`.
-- Assign a list of metrics you want excluded to environment variable `METRICS_TO_EXCLUDE`.
-- Assign a list of images whose metrics you want excluded to environment variable `IMAGES_TO_EXCLUDE`.
+- Assign the default configuration file path `/etc/otel/collector/fargate_config.yaml` to environment variable `SPLUNK_CONFIG`.
+- Optionally assign a list of metrics you want excluded to environment variable `METRICS_TO_EXCLUDE`.
+- Optionally assign a list of images whose metrics you want excluded to environment variable `IMAGES_TO_EXCLUDE`.
+
+The default configuration file is located at `/etc/otel/collector/fargate_config.yaml`
+in the Collector image according to the Collector image Dockerfile
+[here](../../cmd/otelcol/Dockerfile). See the contents of the default configuration file
+[here](../../cmd/otelcol/config/collector/fargate_config.yaml). Note that receivers
+`hostmetrics` and `smartagent/ecs-metadata` are specified.
 
 ## Custom Configuration
-For the Collector to pick up your custom configuration, you need to assign the path to your
-custom configuration file to environment variable `SPLUNK_CONFIG` in the container definition
-for the Collector. In Fargate, this means having your custom configuration file in a volume
-attached to the task and assigning the path to `SPLUNK_CONFIG`.
+For the Collector to pick up custom configuration in a file, you need to assign the file path
+to environment variable `SPLUNK_CONFIG` in the container definition for the Collector. In
+Fargate, this means having your custom configuration file in a volume attached to the task
+and assigning the path to `SPLUNK_CONFIG`.
 
 ### ecs_observer
 Add extension
 [Amazon Elastic Container Service Observer](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/observer/ecsobserver#amazon-elastic-container-service-observer)
-(ecsobserver or ecs_observer) to your custom configuration in order to discover metrics
+(`ecsobserver` or `ecs_observer`) to your custom configuration in order to discover metrics
 targets. The `ecs_observer` can discover targets in running tasks, filtered by service names,
 task definitions and container labels. The `ecs_observer` is currently limited to discovering
-Prometheus targets and requires the read-only permissions below. Add the permissions to the task role
-by adding them to a customer-managed policy attached to the task role.
+Prometheus targets and requires the read-only permissions below. You can add the permissions
+to the task role by adding them to a customer-managed policy that is attached to the task role.
 ```text
 ecs:List*
 ecs:Describe*
@@ -106,8 +108,8 @@ the task arn pattern for `ecs_observer` in the example above filters the discove
 to running revisions of task `lorem-ipsum-task`. This means that the `ecs_observer` will
 discover targets outside the task in which the Collector is running when multiple revisions
 of task `lorem-ipsum-task` are running. One way to solve this is to use the complete task arn
-as shown below. This however adds the overhead of updating the configuration to keep pace
-with task revisions.
+as shown below. This however adds the overhead of updating the task arn pattern in your 
+configuration to keep pace with task revisions.
 
 ```yaml
 ...
@@ -118,8 +120,8 @@ with task revisions.
 ### Direct Configuration
 Since access to the filesystem is not readily available in Fargate, it may be convenient to
 specify the configuration YAML directly at the commandline using environment variable
-`SPLUNK_CONFIG_YAML`. You could:
-- Create a parameter in the AWS Systems Manager Parameter Store for your custom configuration
+`SPLUNK_CONFIG_YAML`. For instance, you could provide custom configuration by:
+- Creating a parameter in the AWS Systems Manager Parameter Store for your custom configuration
   YAML.
 - Use the `ValueFrom` feature to assign the parameter to `SPLUNK_CONFIG_YAML` in the container
   definition for the Collector.
