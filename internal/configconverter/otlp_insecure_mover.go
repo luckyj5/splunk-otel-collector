@@ -18,14 +18,12 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-
-	"go.opentelemetry.io/collector/config/configparser"
 )
 
-func MoveOTLPInsecureKey(in *configparser.ConfigMap) *configparser.ConfigMap {
+func MoveOTLPInsecureKey(in *config.Map) *config.Map {
 	const expr = "exporters::otlp(/\\w+)?::insecure"
 	insecureRE, _ := regexp.Compile(expr)
-	out := configparser.NewConfigMap()
+	out := config.NewMap()
 	var deprecatedOTLPConfigFound bool
 	for _, k := range in.AllKeys() {
 		v := in.Get(k)

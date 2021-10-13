@@ -26,7 +26,6 @@ import (
 
 	"github.com/spf13/cast"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configparser"
 	"go.opentelemetry.io/collector/config/experimental/configsource"
 	"go.opentelemetry.io/collector/consumer/consumererror"
 	"go.uber.org/zap"
@@ -178,7 +177,7 @@ type Manager struct {
 // NewManager creates a new instance of a Manager to be used to inject data from
 // ConfigSource objects into a configuration and watch for updates on the injected
 // data.
-func NewManager(parser *configparser.ConfigMap, logger *zap.Logger, buildInfo component.BuildInfo, factories Factories) (*Manager, error) {
+func NewManager(parser *config.Map, logger *zap.Logger, buildInfo component.BuildInfo, factories Factories) (*Manager, error) {
 	configSourcesSettings, err := Load(context.Background(), parser, factories)
 	if err != nil {
 		return nil, err
@@ -199,8 +198,8 @@ func NewManager(parser *configparser.ConfigMap, logger *zap.Logger, buildInfo co
 // Resolve inspects the given configparser.ConfigMap and resolves all config sources referenced
 // in the configuration, returning a configparser.ConfigMap fully resolved. This must be called only
 // once per lifetime of a Manager object.
-func (m *Manager) Resolve(ctx context.Context, parser *configparser.ConfigMap) (*configparser.ConfigMap, error) {
-	res := configparser.NewConfigMap()
+func (m *Manager) Resolve(ctx context.Context, parser *config.Map) (*config.Map, error) {
+	res := config.NewMap()
 	allKeys := parser.AllKeys()
 	for _, k := range allKeys {
 		if strings.HasPrefix(k, configSourcesKey) {
@@ -510,8 +509,8 @@ func parseCfgSrc(s string) (cfgSrcName, selector string, params interface{}, err
 		selector = strings.Trim(parts[0], " ")
 
 		if len(parts) > 1 && len(parts[1]) > 0 {
-			var p *configparser.ConfigMap
-			if p, err = configparser.NewConfigMapFromBuffer(bytes.NewReader([]byte(parts[1]))); err != nil {
+			var p *config.Map
+			if p, err = config.NewMapFromBuffer(bytes.NewReader([]byte(parts[1]))); err != nil {
 				return
 			}
 			params = p.ToStringMap()
